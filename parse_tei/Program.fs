@@ -11,8 +11,43 @@ let processXml (filePath: string)  =
         )
         |> Seq.toList
         
-let xml_path = "/Users/Shared/work/shared/code-dev/learn-german-fsharp/learn_german/resources/sample_xml/test.xml"
+let test_xml_path = "/Users/Shared/work/shared/code-dev/learn-german-fsharp/learn_german/resources/sample_xml/test.xml"
 // processXml xml_path
+
+let tei_xml_path = "/Users/Shared/work/shared/code-dev/learn-german-fsharp/learn_german/resources/tu-chemnitz/deu-eng.tei"
+
+let xdoc = XDocument.Load(tei_xml_path)
+
+// for entry in xdoc.Descendants("{http://www.tei-c.org/ns/1.0}entry") do // an entry is a word
+//     for form in entry.Elements(XName.Get("{http://www.tei-c.org/ns/1.0}form")) do
+//         for orth in form.Elements(XName.Get("{http://www.tei-c.org/ns/1.0}orth")) do
+//             printfn "%A" orth.Value
+            
+            
+// An entry can be a word or a phrase
+// The entries are not sorted.
+// This is especially because some nouns can become a postfix, like
+// <<Spiel>> becomes <<Hasardspiel>>.
+// <<Hasardspiel>> is placed next to <<Spiel>> in the .tei file.
+
+let entries = xdoc.Descendants("{http://www.tei-c.org/ns/1.0}entry")
+                 
+let spell (entry: XElement) =
+                 entry.Elements(XName.Get("{http://www.tei-c.org/ns/1.0}form"))
+                 |> Seq.exactlyOne
+                 |> (fun form -> form.Elements(XName.Get("{http://www.tei-c.org/ns/1.0}orth")))
+                 |> Seq.exactlyOne
+                 |> (fun orth -> orth.Value)
+                
+let test entries =
+    entries |> Seq.iter (fun (entry: XElement) ->
+        printfn "%s" (spell entry)
+        )
+
+test entries
+
+// let orth = forms |> Seq.map (fun form  -> form.Elements(XName.Get("{http://www.tei-c.org/ns/1.0}orth")))
+// |> Seq.map (fun orth -> printfn "%A" orth.ToString)
 
 let xml_key_values (filePath: string) =
     let xdoc = XDocument.Load(filePath)
@@ -22,7 +57,7 @@ let xml_key_values (filePath: string) =
             |> Seq.map (fun elem -> elem.Value)
             )
         
-for value in (xml_key_values xml_path) do
+for value in (xml_key_values test_xml_path) do
     printfn "%A" value
 
 let elements = ["apple"; "apple"; "banana"; "cherry"]
