@@ -1,0 +1,14 @@
+<mails>
+    <message>
+        <to>Tove</to>
+        <from>Jani</from>
+        <heading>Reminder</heading>
+        <body>Don't forget me this weekend!</body>
+    </message>
+    <message>
+        <to>Jani</to>
+        <from>Tove</from>
+        <heading>Re: Reminder</heading>
+        <body>Understood!</body>
+    </message>
+</mails>
