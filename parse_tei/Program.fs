@@ -31,11 +31,19 @@ let xdoc = XDocument.Load(tei_xml_path)
 // <<Hasardspiel>> is placed next to <<Spiel>> in the .tei file.
 
 let entries = xdoc.Descendants("{http://www.tei-c.org/ns/1.0}entry")
+
+let tag localname =
+    // namespace
+    let ns = "{http://www.tei-c.org/ns/1.0}"
+    ns + localname
+    
+let get_elements (xelement: XElement) (localname: string) =
+    xelement.Elements(XName.Get(tag localname))
                  
 let spell (entry: XElement) =
-                 entry.Elements(XName.Get("{http://www.tei-c.org/ns/1.0}form"))
+                 get_elements entry "form"
                  |> Seq.exactlyOne
-                 |> (fun form -> form.Elements(XName.Get("{http://www.tei-c.org/ns/1.0}orth")))
+                 |> (fun form -> get_elements form "orth")
                  |> Seq.exactlyOne
                  |> (fun orth -> orth.Value)
                 
@@ -45,6 +53,12 @@ let test entries =
         )
 
 test entries
+
+let genders (entry: XElement) =
+                 entry.Elements(XName.Get(tag "gramGrp"))
+                 |> Seq.exactlyOne
+                 |> (fun gramGrp -> get_elements gramGrp "pos")
+                 |> Seq.map (fun pos -> pos.Value) 
 
 // let orth = forms |> Seq.map (fun form  -> form.Elements(XName.Get("{http://www.tei-c.org/ns/1.0}orth")))
 // |> Seq.map (fun orth -> printfn "%A" orth.ToString)
