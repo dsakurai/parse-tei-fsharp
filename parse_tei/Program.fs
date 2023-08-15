@@ -1,7 +1,16 @@
 ﻿// For more information see https://aka.ms/fsharp-console-apps
 
 open System
+open System.Xml
 open System.Xml.Linq
+open System.Diagnostics
+
+let printMemoryUsage () =
+    let process = Process.GetCurrentProcess()
+    let memoryInBytes = process.WorkingSet64
+    let memoryInMegabytes = memoryInBytes / 1024L / 1024L
+    printfn "Memory usage: %d MB" memoryInMegabytes
+
 
 let processXml (filePath: string)  =
     let xdoc = XDocument.Load(filePath)
@@ -16,6 +25,7 @@ let test_xml_path = "/Users/Shared/work/shared/code-dev/learn-german-fsharp/lear
 
 let tei_xml_path = "/Users/Shared/work/shared/code-dev/learn-german-fsharp/learn_german/resources/tu-chemnitz/deu-eng.tei"
 
+printMemoryUsage()
 let xdoc = XDocument.Load(tei_xml_path)
 
 // for entry in xdoc.Descendants("{http://www.tei-c.org/ns/1.0}entry") do // an entry is a word
@@ -30,7 +40,9 @@ let xdoc = XDocument.Load(tei_xml_path)
 // <<Spiel>> becomes <<Hasardspiel>>.
 // <<Hasardspiel>> is placed next to <<Spiel>> in the .tei file.
 
+printMemoryUsage()
 let entries = xdoc.Descendants("{http://www.tei-c.org/ns/1.0}entry")
+printMemoryUsage()
 
 let tag localname =
     // namespace
@@ -47,21 +59,63 @@ let spell (entry: XElement) =
                  |> Seq.exactlyOne
                  |> (fun orth -> orth.Value)
                 
+
+                 
+let genders_der_die_das (entry: XElement) =
+    
+    // masculine, feminine, neuter as 'm', 'f', 'n'
+    let genders_mfn (entry: XElement) =
+                     let gramGrp = entry.Elements(XName.Get(tag "gramGrp"))
+                     if Seq.isEmpty gramGrp then
+                         Seq.empty // empty gender is given for, e.g., a verb.
+                     else
+                         gramGrp
+                         |> Seq.exactlyOne
+                         |> (fun gramGrp -> get_elements gramGrp "pos")
+                         |> Seq.map (fun pos -> pos.Value)
+
+    let genders = genders_mfn entry
+    
+    [ if Seq.contains "m" genders then yield "der"
+      if Seq.contains "f" genders then yield "die"
+      if Seq.contains "n" genders then yield "das"
+       ]
+
+
+type Word = {
+    spelling: string
+    grammar_group: string
+}
+
+let words_map =
+    entries
+    // the spell
+    |> Seq.groupBy (fun (entry: XElement) -> spell entry)
+    |> Seq.map (fun (spelling: string, entries: seq<XElement>) ->
+            (spelling,
+             entries
+            )
+        )
+    |> Map.ofSeq
+    
+printMemoryUsage()
+    
+let A_s = Map.find "A" words_map
+
+printMemoryUsage()
+    
+for each in A_s do
+    Console.WriteLine(each)
+
 let test entries =
     entries |> Seq.iter (fun (entry: XElement) ->
+        let spelling: string = spell entry
         printfn "%s" (spell entry)
+        
+        // let x = genders_der_die_das entry
         )
 
 test entries
-
-let genders (entry: XElement) =
-                 entry.Elements(XName.Get(tag "gramGrp"))
-                 |> Seq.exactlyOne
-                 |> (fun gramGrp -> get_elements gramGrp "pos")
-                 |> Seq.map (fun pos -> pos.Value) 
-
-// let orth = forms |> Seq.map (fun form  -> form.Elements(XName.Get("{http://www.tei-c.org/ns/1.0}orth")))
-// |> Seq.map (fun orth -> printfn "%A" orth.ToString)
 
 let xml_key_values (filePath: string) =
     let xdoc = XDocument.Load(filePath)
@@ -74,17 +128,3 @@ let xml_key_values (filePath: string) =
 for value in (xml_key_values test_xml_path) do
     printfn "%A" value
 
-let elements = ["apple"; "apple"; "banana"; "cherry"]
-
-let keyValueMap =
-    elements
-    |> Seq.groupBy id // Group by the element
-    |> Seq.map (fun (key, values) ->
-                                      (key,
-                                       Seq.map (fun (value: string) -> value.Length) values
-                                      )
-    ) // Map the values to their lengths
-    |> Map.ofSeq
-    
-// Print the map to verify the result
-keyValueMap |> Map.iter (fun key values -> printfn "Key: %s, Value: %A" key values)
